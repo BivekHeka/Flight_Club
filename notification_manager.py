@@ -55,7 +55,7 @@
 
 class NotificationManager:
     def send_sms(self, message_body):
-        print(f"[MOCK SMS] {message_body}")
+        print(f" {message_body}")
 
     def send_whatsapp(self, message_body):
-        print(f"[MOCK WhatsApp] {message_body}")
+        print(f"[WhatsApp Alert] {message_body}")
