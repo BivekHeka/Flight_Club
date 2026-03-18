@@ -156,7 +156,7 @@ for dest in sheet_data:
         print(f"❌ No flights found for {city}\n")
         continue
 
-    cheapest_flight = find_cheapest_flight(flights)
+    cheapest_flight = find_cheapest_flight(flights, base_price=dest["lowestPrice"])
 
     # Print flight info with stops
     stops_text = "Direct ✈️" if cheapest_flight.stops == 0 else f"{cheapest_flight.stops} stop(s) 🛬"
