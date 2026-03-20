@@ -136,16 +136,19 @@ six_months = datetime.now() + timedelta(days=6*30)
 
 print("\n🚀 Starting flight deal search...\n")
 
+# Hold all flight deals to sort later
+all_flight_deals = []
+
 for dest in sheet_data:
     city = dest["city"]
     print(f"🔍 Checking flights to {city}...")
 
-    # Check direct flights first
+    # Direct flights first
     flights = flight_search.check_flights(
         ORIGIN_CITY_IATA, dest["iataCode"], from_time=tomorrow, to_time=six_months, is_direct=True
     )
 
-    # If no direct flights, check indirect
+    # If no direct flights, try indirect
     if flights is None:
         print(f"⚠️ No direct flights to {city}. Searching for flights with stopovers...")
         flights = flight_search.check_flights(
@@ -157,19 +160,29 @@ for dest in sheet_data:
         continue
 
     cheapest_flight = find_cheapest_flight(flights, base_price=dest["lowestPrice"])
-
-    # Print flight info with stops
     stops_text = "Direct ✈️" if cheapest_flight.stops == 0 else f"{cheapest_flight.stops} stop(s) 🛬"
-    print(f"💰 {city}: £{cheapest_flight.price} | {stops_text} | "
-          f"{cheapest_flight.out_date} → {cheapest_flight.return_date}\n")
 
-    # If price is lower than sheet's lowestPrice → send mock WhatsApp
+    # Add to all deals list
+    all_flight_deals.append({
+        "city": city,
+        "price": cheapest_flight.price,
+        "stops": stops_text,
+        "out_date": cheapest_flight.out_date,
+        "return_date": cheapest_flight.return_date
+    })
+
+    # Notify if cheaper than sheet price
     if cheapest_flight.price != "N/A" and cheapest_flight.price < dest["lowestPrice"]:
         print(f"🎉 DEAL ALERT! Cheaper flight to {city} found! Sending notification...\n")
-        notification_manager.send_whatsapp(
-            message_body=f"🔥 Low price alert! £{cheapest_flight.price} to fly from "
-                         f"{cheapest_flight.origin_airport} → {cheapest_flight.destination_airport} "
-                         f"({stops_text}) on {cheapest_flight.out_date} until {cheapest_flight.return_date}!"
-        )
+        message = (f"🔥 *Low price alert!* £{cheapest_flight.price} to fly from "
+                   f"*{cheapest_flight.origin_airport} → {cheapest_flight.destination_airport}* "
+                   f"({stops_text})\n🛫 Depart: {cheapest_flight.out_date}\n🛬 Return: {cheapest_flight.return_date}")
+        notification_manager.send_whatsapp(message_body=message)
 
     time.sleep(2)
+
+# ==================== Print Dashboard ====================
+print("\n📊 Flight Deals Dashboard (sorted by price) 📊\n")
+sorted_deals = sorted(all_flight_deals, key=lambda x: x["price"])
+for deal in sorted_deals:
+    print(f"{deal['city']}: £{deal['price']} | {deal['stops']} | {deal['out_date']} → {deal['return_date']}")
